@@ -1,0 +1,40 @@
+sequenceDiagram
+    participant C as Client
+    participant R as Registry
+
+    Note over C,R: Chunked Upload - Three Phase Process
+    rect rgb(240, 240, 240)
+        Note right of C: Phase 1: Obtain a Session ID
+        C->>R: POST /v2/<name>/blobs/uploads/
+        Note over C,R: Mandatory Headers: <name>, Content-Length: 0
+        R->>C: 202 Accepted
+        Note over C,R: Mandatory Headers: Location: <location>, If registry has a min chunk size: OCI-Chunk-Min-Length: <size>
+    end        
+    rect rgb(240, 240, 240)
+        Note right of C: Phase 2: Upload Chunks
+        loop Until all chunks uploaded
+        C->>R: PATCH <location> with [chunk data]
+        Note over C,R: Mandatory Headers: Content-Type, Content-Range, Content-Length 
+        alt chunk in correct order
+        R-->>C: 202 Accepted 
+        Note over C,R: Mandatory Headers: Location: <location>, Range: 0-<end-of-range>
+        else chunk in out of order
+        R-->>C: 416 Requested Range Not Satisfiable 
+        Note over C,R: Recovery Process
+        C->>R: GET <location>
+        R-->>C: 204 No content 
+        Note over C,R: Mandatory Headers: Location: <location> Range: 0-<end-of-range>
+        end
+        end
+    end
+    rect rgb(240, 240, 240)
+        Note right of C: Phase 3: Close Upload Session
+        alt Final chunk in closing Requested
+        C->>R: PUT <location>?digest=<digest>  with [final chunk]
+        Note over C,R: Mandatory Headers: Content-Type, Content-Range, Content-Length
+        else Final chunk already uploaded
+        C->>R: PUT <location>?digest=<digest>
+        end
+        R-->>C: 201 Created
+        Note over C,R: Mandatory Headers: Location <blob-location>
+    end

@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant C as Client
+    participant R as Registry
+    participant S as BlobStore
+    Note over C,R: POST then PUT Method
+    rect rgb(240, 240, 240)
+        Note right of C: Step 1: Obtain Session ID
+        C->>+R: POST /v2/<name>/blobs/uploads/
+        Note over R: Generate unique session ID internally
+        R-->>-C: 202 Accepted \n Location: <location>
+    end
+    rect rgb(240, 240, 240)
+        Note right of C: Step 2: Upload Blob
+        C->>+R: PUT <location>?digest=<digest> \n Content-Length: <length>
+        R->>+S: Store Blob Data
+        S-->>-R: Confirm Storage
+        R-->>-C: 201 Created \nLocation: <blob-location>
+    end
+    
+    
+    
+
+    
