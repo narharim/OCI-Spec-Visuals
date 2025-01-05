@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant Client
+    participant Registry
+
+    note over Client,Registry: Normal Flow - Successful Push
+    Client->>+Registry: PUT /v2/<name>/manifests/<reference> with body [manifest byte stream]
+    note over Client: Include headers:- Content-Type:<manifest mediaType>
+    
+    alt Successful Push
+        Registry->>Registry: Validate manifest size (≤ 4MB)
+        Registry->>Registry: Store manifest bytes
+        Registry-->>-Client: 201 Created
+        note over Registry: Include headers:- Location: <pullable manifest URL> \n Docker-Content-Digest: <canonical digest>
+    
+    else Manifest Too Large
+        Registry-->>Client: 413 Payload Too Large
+        note over Client,Registry: Registry enforces size limit (typically 4MB)
+    
+    else Repository Not Found
+        Registry-->>Client: 404 Not Found
+    end
